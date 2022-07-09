@@ -296,6 +296,60 @@ class Gammoid(sage.matroids.matroid.Matroid):
         
     def groundset(self):
         return self.E
+
+    def dualityRespectingRepresentation(self):
+        """ returns a duality respecting representation of this gammoid
+        """
+        sources = self.E.difference(self.T)
+        sinks = self.T
+        fixSources = frozenset((s for s in sources if self.D.neighbors_in(s)))
+        fixSinks = frozenset((s for s in sinks if self.D.neighbors_out(s)))
+        if not fixSources.union(fixSinks): # already DRR
+            return self
+        V = set(self.D.vertex_iterator())
+        usedVertices = set((str(v) for v in V))
+        edges = list(self.D.edges())
+        vidx = 1
+        for s in fixSources:
+            while f"v{vidx}" in usedVertices:
+                vidx += 1
+
+            v = f"v{vidx}"
+            usedVertices.add(v)
+            V.add(v)
+
+            # rename s to v
+            edges = list(map(lambda x: 
+                            (x[0] if x[0] != s else v, 
+                             x[1] if x[1] != s else v, 
+                             x[2]), 
+                        edges))
+            # add arc from s -> v
+            edges.append((s,v,None))
+        for s in fixSinks:
+            while f"v{vidx}" in usedVertices:
+                vidx += 1
+
+            v = f"v{vidx}"
+            usedVertices.add(v)
+            V.add(v)
+
+            # rename s to v
+            edges = list(map(lambda x: 
+                            (x[0] if x[0] != s else v, 
+                             x[1] if x[1] != s else v, 
+                             x[2]), 
+                        edges))
+            # add arc from v -> s
+            edges.append((v,s,None))
+        outArcs = dict(([v,[]] for v in V))
+        for u,v,l in edges:
+            outArcs[u].append(v)
+        D = sage.graphs.digraph.DiGraph(outArcs)
+        return Gammoid(D, self.T, self.E)
+
+
+
     
     def routing(self,X):
         """ finds a maximal routing from (a subset of) X to the set T
