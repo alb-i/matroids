@@ -1,5 +1,10 @@
 import sage.matroids.matroid
 import sage.graphs.bipartite_graph
+import sage.graphs.digraph
+
+# Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
+# in a bipartite graph
+
 class TransversalMatroid(sage.matroids.matroid.Matroid):
     def __init__(self, faceMap):
         """ faceMap __ a map that maps each matroid element to a set of (abstract) vertices defining the face it is on (in general position)"""
@@ -42,9 +47,10 @@ class TransversalMatroid(sage.matroids.matroid.Matroid):
         GX = self.G.subgraph(Xs.union(self.GV))
         return len(GX.matching())
         
-        
     def _repr_(self):
         return f"TransversalMatroid({self.facemap})"
+    
+# Implementation helpers for gammoids that deal with augmentations of routings
        
 def outboundNeighbors(D, paths, visited=None, V=None):
     """ computes the outbound neighbors that are accessible from each vertex wrt. to a given (partial) routing
