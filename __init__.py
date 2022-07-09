@@ -7,7 +7,9 @@ import sage.graphs.digraph
 
 class TransversalMatroid(sage.matroids.matroid.Matroid):
     def __init__(self, faceMap):
-        """ faceMap __ a map that maps each matroid element to a set of (abstract) vertices defining the face it is on (in general position)"""
+        """ creates a transversal matroid that uses bipartite graphs as a backend
+        faceMap __ a map that maps each matroid element to a set of (abstract) vertices 
+                   defining the face it is on (in general position) """
         faceMap = dict(faceMap)
         
         E = set(faceMap)
@@ -30,7 +32,7 @@ class TransversalMatroid(sage.matroids.matroid.Matroid):
             
         partition = [[('v',i) for i in range(len(V))],[('e',e) for e in E]]
         data = dict(map(lambda y: (('e',y[0]),[('v',z) for z in y[1]]),fm.items()))
-        print(data)
+        
         G = sage.graphs.bipartite_graph.BipartiteGraph(data,partition)
         self.GE = partition[1]
         self.GV = partition[0]
@@ -243,3 +245,40 @@ class DigraphRouting(object):
             if not self.D.has_edge(u,v):
                 return False
         return True
+    
+# Straightforward implementation of a gammoid
+class Gammoid(sage.matroids.matroid.Matroid):
+    def __init__(self, D, T, E=None):
+        """ Create a strict gammoid.
+            D __ digraph (some representation)
+            T __ set of target vertices of D 
+            E __ set of vertices that are edges in the matroid (optional)"""
+        
+        D0 = sage.graphs.digraph.DiGraph(D)
+        V0 = set(D0.vertex_iterator())
+        T0 = V0.intersection(T)
+        if E is None:
+            E0 = V0
+        else:
+            E0 = frozenset(V0).intersection(E)
+            
+        self.E = E0
+        self.T = frozenset(T0)
+        self.D = D0
+        
+    def groundset(self):
+        return self.E
+    
+    def routing(self,X):
+        """ finds a maximal routing from (a subset of) X to the set T
+        """
+        R = DigraphRouting(self.D, self.T)
+        for x in X:
+            R.augment(x)
+        return R
+    
+    def _rank(self, X):
+        return len(self.routing(X).paths)
+        
+    def _repr_(self):
+        return f"Gammoid({self.D},{self.T},{self.E})"
