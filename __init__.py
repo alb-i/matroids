@@ -1,6 +1,7 @@
 import sage.matroids.matroid
 import sage.graphs.bipartite_graph
 import sage.graphs.digraph
+import sage.matroids.dual_matroid
 
 # Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
 # in a bipartite graph
@@ -273,6 +274,30 @@ class DigraphRouting(object):
             if not self.D.has_edge(u,v):
                 return False
         return True
+
+    def pivot(self):
+        """ returns the digraph that results from pivoting in the routing
+        """
+        arcs = frozenset((u,v) for u,v,_ in self.D.edges())
+        for p in self.paths:
+            for r,s in zip(p[::-1][1:],p[::-1][:-1]):
+                uNotTail = frozenset(((u,v) for u,v in arcs if u != r))
+                rOuterExtension = frozenset((v for u,v in arcs if u == r)).union({r})
+                sOut = frozenset(((s,x) for x in rOuterExtension)).difference({(s,s)})
+                arcs = uNotTail.union(sOut)
+        out = dict(( (v,frozenset((w for u,w in arcs if u == v))) for v in self.V))
+        return sage.graphs.digraph.DiGraph(out)
+
+    def targets(self):
+        """ returns the targets used by paths in the routing
+        """
+        return frozenset((p[-1] for p in self.paths))
+
+    def sources(self):
+        """ returns the first vertices of paths in the routing
+        """
+        return frozenset((p[0] for p in self.paths))
+
     
 # Straightforward implementation of a gammoid
 class Gammoid(sage.matroids.matroid.Matroid):
@@ -293,19 +318,50 @@ class Gammoid(sage.matroids.matroid.Matroid):
         self.E = E0
         self.T = frozenset(T0)
         self.D = D0
-        
+
+    def targetsAreEdges(self):
+        """ checks whether every target is also an edge
+        """
+        return self.T.issubset(self.E)
+
+    def normalizeTargets(self,key=None):
+        """ modifies the digraph representation, such that
+            - every target is also an edge of the matroid
+            - the miminal base wrt. to the sorting is the target set
+
+            key __ (optional) passed over to sorted(..)
+        """
+        E = list(sorted(self.E,key=key))
+        R = DigraphRouting(self.D,self.T)
+        for e in E:
+            R.augment(e)
+        D = R.pivot()
+        T = R.sources()
+        return Gammoid(D,T,self.E)
+
+
     def groundset(self):
         return self.E
 
-    def dualityRespectingRepresentation(self):
-        """ returns a duality respecting representation of this gammoid
+    def isCanonicalDRR(self):
+        """ checks whether the underyling representation of this gammoid is a canonical duality respecting representation
         """
+        if not self.targetsAreEdges():
+            return False
         sources = self.E.difference(self.T)
         sinks = self.T
         fixSources = frozenset((s for s in sources if self.D.neighbors_in(s)))
         fixSinks = frozenset((s for s in sinks if self.D.neighbors_out(s)))
-        if not fixSources.union(fixSinks): # already DRR
-            return self
+        return not fixSources.union(fixSinks)
+
+    def _canonicalDRRDigraph(self):
+        if not self.targetsAreEdges():
+            raise "ERROR: Targets must be chosen from E"
+
+        sources = self.E.difference(self.T)
+        sinks = self.T
+        fixSources = frozenset((s for s in sources if self.D.neighbors_in(s)))
+        fixSinks = frozenset((s for s in sinks if self.D.neighbors_out(s)))
         V = set(self.D.vertex_iterator())
         usedVertices = set((str(v) for v in V))
         edges = list(self.D.edges())
@@ -343,12 +399,28 @@ class Gammoid(sage.matroids.matroid.Matroid):
             # add arc from v -> s
             edges.append((v,s,None))
         outArcs = dict(([v,[]] for v in V))
-        for u,v,l in edges:
+        for u,v,_ in edges:
             outArcs[u].append(v)
         D = sage.graphs.digraph.DiGraph(outArcs)
-        return Gammoid(D, self.T, self.E)
+        return D
 
+    def canonicalDRR(self):
+        """ returns a canonical duality respecting representation of this gammoid
+        """
+        if self.isCanonicalDRR():
+            return self
 
+        if self.targetsAreEdges():
+            M = self
+        else:
+            M = self.normalizeTargets()
+
+        return Gammoid(M._canonicalDRRDigraph(), M.T, M.E)
+
+    def dual(self):
+        if self.isCanonicalDRR():
+            return Gammoid(self.D.reverse(),self.T,self.E)
+        return sage.matroids.dual_matroid.DualMatroid(self)
 
     
     def routing(self,X):
