@@ -108,3 +108,120 @@ def outboundNeighbors(D, paths, visited=None, V=None):
         if not v in out:
             out[v] = frozenset()
     return out
+
+def traverseArcs(start, arcs):
+    """ traverse the arcs from the starting point
+    
+    start __ start vertex
+    arcs  __ dictionary with successors
+    
+    returns the path starting in the start vector, or None if there is a cycle
+    """
+    
+    v = start
+    path = [v]
+    
+    while v in arcs:
+        v = arcs[v]
+        if v in path:
+            return None
+        path.append(v)
+    
+    return tuple(path)
+
+class DigraphRouting(object):
+    def _updateAugStructs(self):
+        self.visited = set().union(*self.paths) # vertices that have been visited by a path
+        augOut = outboundNeighbors(
+            D=self.D,
+            paths=self.paths,
+            visited=self.visited,
+            V=self.V)
+        
+        self.T1 = frozenset((p[-1] for p in self.paths))
+        
+        # disregard any outbound connectivity of any unused terminal
+        for t in self.T.difference(self.T1):
+            augOut[t] = frozenset()
+            
+        
+        
+        augA = dict((
+            (u,frozenset((v for v,_,_ in d))) for u,d in augOut.items()
+        ))
+        
+        
+        self.aug = augOut
+        self.augD = sage.graphs.digraph.DiGraph(augA)
+        self.augA = augA
+        
+        self.traversed = frozenset((
+            (u,v) 
+                  for p in self.paths
+                  for u,v in zip(p[:-1],p[1:]) 
+        ))
+        
+        
+    def __init__(self, D, T):
+        """ Create an empty digraph routing 
+            D _ digraph (some representation)
+            T _ set of target vertices to be considered for routings
+        """
+        D0 = sage.graphs.digraph.DiGraph(D)
+        V0 = frozenset(D0.vertex_iterator())
+        T0 = V0.intersection(T)
+        
+        self.D = D0
+        self.V = V0
+        self.T = T0
+        
+        self.paths = set() # paths in the routing (as tuples of vertices)
+        
+        self._updateAugStructs()
+        
+        
+    def augment(self, source):
+        """ Try to augment the routing such that another source routes to the target set
+            source __ vertex that should be added to the routing
+            
+            returns True, if the augmentation was possible, False otherwise
+        """
+        usedT = frozenset((p[-1] for p in self.paths))
+        freeT = self.T.difference(usedT)
+    
+        for p0 in self.augD.all_paths_iterator([source],freeT,simple=True,trivial=True):
+            S = frozenset((p[0] for p in self.paths)).union({p0[0]})
+            P = frozenset((
+                x
+                for u,v in zip(p0[:-1],p0[1:])
+                for x in self.aug[u] 
+                    if x[0] == v  
+                ))
+            X = frozenset().union(*(X for _,X,_ in P)) # deleted arcs
+            Y = frozenset((y for _,_,y in P)) # new arcs
+            traversed = dict(self.traversed.difference(X).union(Y))
+            
+            
+            paths = frozenset((traverseArcs(s,traversed) for s in S))
+            
+            
+            self.paths = paths
+            self._updateAugStructs()
+            
+            return True
+        
+        # source cannot reach any unused target
+        
+        return False
+    
+    def isValid(self):
+        """ checks whether the routing is indeed a routing in the underlying digraph """
+        totalCount = len(frozenset().union(*self.paths))
+        sumCounts = sum((len(p) for p in self.paths))
+        if totalCount != sumCounts:
+            return False
+            
+        for u,v in self.traversed:
+            if not self.D.has_edge(u,v):
+                return False
+        return True
