@@ -214,6 +214,24 @@ class DigraphRouting(object):
         
         return False
     
+    def drop(self, *vertices):
+        """ Drops all paths from the routing that use one of the given vertices
+            *vertices __ list of vertices whose paths should be dropped
+            
+            returns the number of dropped paths
+        """
+        drop = frozenset(vertices)
+        l = len(self.paths)
+        paths = frozenset((
+            p for p in self.paths
+              if not drop.intersection(p)
+        ))
+        
+        self.paths = paths
+        self._updateAugStructs()
+        
+        return l-len(self.paths)
+    
     def isValid(self):
         """ checks whether the routing is indeed a routing in the underlying digraph """
         totalCount = len(frozenset().union(*self.paths))
