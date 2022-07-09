@@ -196,13 +196,12 @@ class DigraphRouting(object):
             #         routing path which is something that is not necessary, i.e., if you have 
             #         a path with more than one backjump on the same original routing path
             #         *and the backjumps cross*, then you can fix the path by shortening it
-            #         If DFS is used to obtain the paths, then the 'weird' paths come after
+            #         If BFS is used to obtain the paths, then the 'weird' paths come after
             #         their non-weird counterparts, because the 'weird' paths have more vertices.
             #         DiGraph.all_paths_iterator guarantees that the paths are enumerated in 
             #         increasing length order, making p0 a non-weird path (if a path exists).
             #         But this guarantee may break at some point, so to be safe, we implement
             #         a validity check.
-
 
             S = frozenset((p[0] for p in self.paths)).union({p0[0]})
             P = frozenset((
@@ -216,9 +215,6 @@ class DigraphRouting(object):
             traversed = dict(self.traversed.difference(X).union(Y))
             
             paths = frozenset((traverseArcs(s,traversed) for s in S))
-            
-            
-            
 
             if self.isValid(paths):
                 self.paths = paths
