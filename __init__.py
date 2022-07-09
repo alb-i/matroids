@@ -190,7 +190,6 @@ class DigraphRouting(object):
         """
         usedT = frozenset((p[-1] for p in self.paths))
         freeT = self.T.difference(usedT)
-        originalPaths = self.paths
     
         for p0 in self.augD.all_paths_iterator([source],freeT,simple=True,trivial=True):
             # notice: the candidate path p0 may have several backjumps using the same original 
@@ -216,18 +215,18 @@ class DigraphRouting(object):
             Y = frozenset((y for _,_,y in P)) # new arcs
             traversed = dict(self.traversed.difference(X).union(Y))
             
-            
             paths = frozenset((traverseArcs(s,traversed) for s in S))
             
             
-            self.paths = paths
-            self._updateAugStructs()
+            
 
-            if self.isValid():
+            if self.isValid(paths):
+                self.paths = paths
+                self._updateAugStructs()
                 return True
             else:
                 print(f"Warning: got weird path {p0} first!")
-                self.paths = originalPaths
+                
         
         # source cannot reach any unused target
         
@@ -251,18 +250,30 @@ class DigraphRouting(object):
         
         return l-len(self.paths)
     
-    def isValid(self):
-        """ checks whether the routing is indeed a routing in the underlying digraph """
+    def isValid(self,paths=None):
+        """ checks whether the routing is indeed a routing in the underlying digraph 
+            paths __ set of paths (optional)
+        """
+        if paths is None:
+            paths = self.paths
+        else:
+            paths = frozenset(paths)
         # no vertex may be on two paths
-        totalCount = len(frozenset().union(*self.paths))
-        sumCounts = sum((len(p) for p in self.paths))
+        totalCount = len(frozenset().union(*paths))
+        sumCounts = sum((len(p) for p in paths))
         if totalCount != sumCounts:
             return False
         # each path must end in a target vertex
-        if not frozenset((p[-1] for p in self.paths)).issubset(self.T):
+        if not frozenset((p[-1] for p in paths)).issubset(self.T):
             return False
+        # update the traversed arcs struct
+        traversed = frozenset((
+            (u,v) 
+                  for p in paths
+                  for u,v in zip(p[:-1],p[1:]) 
+        ))
         # paths must traverse arcs of D
-        for u,v in self.traversed:
+        for u,v in traversed:
             if not self.D.has_edge(u,v):
                 return False
         return True
