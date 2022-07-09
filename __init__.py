@@ -419,7 +419,7 @@ class Gammoid(sage.matroids.matroid.Matroid):
 
     def dual(self):
         if self.isCanonicalDRR():
-            return Gammoid(self.D.reverse(),self.T,self.E)
+            return Gammoid(self.D.reverse(),self.E.difference(self.T),self.E)
         return sage.matroids.dual_matroid.DualMatroid(self)
 
     
