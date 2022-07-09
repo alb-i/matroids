@@ -190,8 +190,21 @@ class DigraphRouting(object):
         """
         usedT = frozenset((p[-1] for p in self.paths))
         freeT = self.T.difference(usedT)
+        originalPaths = self.paths
     
         for p0 in self.augD.all_paths_iterator([source],freeT,simple=True,trivial=True):
+            # notice: the candidate path p0 may have several backjumps using the same original 
+            #         routing path which is something that is not necessary, i.e., if you have 
+            #         a path with more than one backjump on the same original routing path
+            #         *and the backjumps cross*, then you can fix the path by shortening it
+            #         If DFS is used to obtain the paths, then the 'weird' paths come after
+            #         their non-weird counterparts, because the 'weird' paths have more vertices.
+            #         DiGraph.all_paths_iterator guarantees that the paths are enumerated in 
+            #         increasing length order, making p0 a non-weird path (if a path exists).
+            #         But this guarantee may break at some point, so to be safe, we implement
+            #         a validity check.
+
+
             S = frozenset((p[0] for p in self.paths)).union({p0[0]})
             P = frozenset((
                 x
@@ -209,8 +222,12 @@ class DigraphRouting(object):
             
             self.paths = paths
             self._updateAugStructs()
-            
-            return True
+
+            if self.isValid():
+                return True
+            else:
+                print(f"Warning: got weird path {p0} first!")
+                self.paths = originalPaths
         
         # source cannot reach any unused target
         
@@ -236,11 +253,15 @@ class DigraphRouting(object):
     
     def isValid(self):
         """ checks whether the routing is indeed a routing in the underlying digraph """
+        # no vertex may be on two paths
         totalCount = len(frozenset().union(*self.paths))
         sumCounts = sum((len(p) for p in self.paths))
         if totalCount != sumCounts:
             return False
-            
+        # each path must end in a target vertex
+        if not frozenset((p[-1] for p in self.paths)).issubset(self.T):
+            return False
+        # paths must traverse arcs of D
         for u,v in self.traversed:
             if not self.D.has_edge(u,v):
                 return False
