@@ -2,6 +2,7 @@ import sage.matroids.matroid
 import sage.graphs.bipartite_graph
 import sage.graphs.digraph
 import sage.matroids.dual_matroid
+import itertools
 
 # Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
 # in a bipartite graph
@@ -165,10 +166,12 @@ class DigraphRouting(object):
         ))
         
         
-    def __init__(self, D, T):
+    def __init__(self, D, T, validatePaths=False):
         """ Create an empty digraph routing 
             D _ digraph (some representation)
             T _ set of target vertices to be considered for routings
+            validatePaths _ set to true to check whether the paths obtained from the iterator are okay,
+                            (should not be needed for BFS path enumeration)
         """
         D0 = sage.graphs.digraph.DiGraph(D)
         V0 = frozenset(D0.vertex_iterator())
@@ -177,6 +180,7 @@ class DigraphRouting(object):
         self.D = D0
         self.V = V0
         self.T = T0
+        self.validatePaths = validatePaths
         
         self.paths = set() # paths in the routing (as tuples of vertices)
         
@@ -217,7 +221,7 @@ class DigraphRouting(object):
             
             paths = frozenset((traverseArcs(s,traversed) for s in S))
 
-            if self.isValid(paths):
+            if (not self.validatePaths) or self.isValid(paths):
                 self.paths = paths
                 self._updateAugStructs()
                 return True
@@ -436,3 +440,43 @@ class Gammoid(sage.matroids.matroid.Matroid):
         
     def _repr_(self):
         return f"Gammoid({self.D},{self.T},{self.E})"
+
+
+## Test for strict gammoid
+
+def isStrictGammoid(M):
+    """ tests a matroid whether it is a strict gammoid using Mason's alpha criterion
+        M __ matroid
+
+        return False if M is not a strict gammoid,
+           and True if it is.
+    """
+    alpha = {}
+    
+    allFlats = itertools.chain.from_iterable((M.flats(r) for r in range(0,M.rank()+1)))
+    allDependentFlats = filter(M.is_dependent, allFlats)
+    # compute Mason's alpha for all dependent flats
+    for x in allDependentFlats:
+        nlt = len(x) - M.rank(x)
+        for y in alpha:
+            if y.issubset(x):
+                nlt -= alpha[y]
+        if nlt < 0:
+            return False # not a strict gammoid
+        alpha[x] = nlt
+        
+    nonZero = frozenset([x for x in alpha.keys() if alpha[x] > 0])
+    testSets = set()
+    for i in range(2,len(nonZero)):
+        for Q in itertools.combinations(nonZero,i):
+            testSets.add(frozenset().union(*Q))
+    # compute Mason's alpha for unions of dependent flats with positive alpha
+    for x in testSets.difference(alpha.keys()):
+        nlt = len(x) - M.rank(x)
+        for y in alpha:
+            if y.issubset(x):
+                nlt -= alpha[y]
+        if nlt < 0:
+            return False # not a strict gammoid
+    # all alpha values are non-negative => M is a strict gammoid
+    return True
