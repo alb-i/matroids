@@ -2,6 +2,7 @@ import sage.matroids.matroid
 import sage.graphs.bipartite_graph
 import sage.graphs.digraph
 import sage.matroids.dual_matroid
+import sage.graphs.graph
 import itertools
 
 # Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
