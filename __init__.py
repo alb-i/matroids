@@ -11,7 +11,10 @@ class TransversalMatroid(sage.matroids.matroid.Matroid):
     def __init__(self, faceMap):
         """ creates a transversal matroid that uses bipartite graphs as a backend
         faceMap __ a map that maps each matroid element to a set of (abstract) vertices 
-                   defining the face it is on (in general position) """
+                   defining the face it is on (in general position) 
+                   
+        ex: n = TransversalMatroid({'d': frozenset({1}), 'a': frozenset({0}), 'c': frozenset({0})})           
+        """
         faceMap = dict(faceMap)
         
         E = set(faceMap)
@@ -309,7 +312,12 @@ class Gammoid(sage.matroids.matroid.Matroid):
         """ Create a strict gammoid.
             D __ digraph (some representation)
             T __ set of target vertices of D 
-            E __ set of vertices that are edges in the matroid (optional)"""
+            E __ set of vertices that are edges in the matroid (optional)
+            
+            
+            ex: m = Gammoid({'a':"efg",'b':"cdf",'f':"xyz",'d':"z","x":"z"},"xyz","abcdefg")
+            
+            """
         
         D0 = sage.graphs.digraph.DiGraph(D)
         V0 = set(D0.vertex_iterator())
@@ -486,7 +494,10 @@ def isStrictGammoid(M):
 class BicircularMatroid(sage.matroids.matroid.Matroid):
     def __init__(self, edgeVertexMap):
         """ creates a bicircular matroid 
-        edgeVertexMap __ a map that maps each matroid element an edge of a graph """
+        edgeVertexMap __ a map that maps each matroid element an edge of a graph 
+        
+        ex: m = BicircularMatroid({"a":[0,1],"b":[1,2],"c":[2,0],"x":[2,8],"d":[8,9],"e":[9,8],"f":[9,9]})
+        """
         edgeVertexMap = dict(edgeVertexMap)
         edgeVertexMap = dict(((k,list(v)) for k,v in edgeVertexMap.items()))
         
