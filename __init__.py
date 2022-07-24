@@ -480,3 +480,43 @@ def isStrictGammoid(M):
             return False # not a strict gammoid
     # all alpha values are non-negative => M is a strict gammoid
     return True
+
+## implementation of a bicircular matroid using the sage Graph class
+
+class BicircularMatroid(sage.matroids.matroid.Matroid):
+    def __init__(self, edgeVertexMap):
+        """ creates a bicircular matroid 
+        edgeVertexMap __ a map that maps each matroid element an edge of a graph """
+        edgeVertexMap = dict(edgeVertexMap)
+        edgeVertexMap = dict(((k,list(v)) for k,v in edgeVertexMap.items()))
+        
+        E = set(edgeVertexMap)
+        
+        self.edgeVertexMap = edgeVertexMap
+        self.E = frozenset(E)
+        # not needed, but still handy
+        self.G = sage.graphs.graph.Graph(loops=True,multiedges=True)
+        for edge,uv in self.edgeVertexMap.items():
+            self.G.add_edge(uv[0],uv[-1],edge)
+        
+    def groundset(self):
+        return self.E
+    
+    def _rank(self, X):
+        # create the appropriate subgraph from the edgeVertexMap
+        G = sage.graphs.graph.Graph(loops=True,multiedges=True)
+        for edge in set(X):
+            uv = self.edgeVertexMap[edge]
+            G.add_edge(uv[0],uv[-1],edge)
+        # determine the size of a base of X
+        rank = 0
+        for component in G.connected_components():
+            G0 = G.subgraph(component)
+            T = next(G0.spanning_trees(True))
+            # we may augment T with up to one edge in order to get a bicircular basis for the component
+            rank += min(len(G0.edges()),len(T.edges())+1)
+        
+        return rank
+        
+    def _repr_(self):
+        return f"BicircularMatroid({self.edgeVertexMap})"
