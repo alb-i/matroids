@@ -532,3 +532,67 @@ class BicircularMatroid(sage.matroids.matroid.Matroid):
         
     def _repr_(self):
         return f"BicircularMatroid({self.edgeVertexMap})"
+
+## check a matroid for how many 'positive' colines there are
+
+def categorizeColines(M,onlySummary=False):
+    """
+        M __ matroid
+
+        onlySummary __ if set, then only the summary (positive and fat colines) will be returned
+
+        returns a dictionary with information of the number of copoints with a given cardinality per coline,
+                and an entry how many positive colines there are
+    """
+    rk = M.rank()
+    result = {'positive':0,'fat':0}
+    copoints = list(M.flats(rk-1))
+    colines = list(M.flats(rk-2))
+    for l in colines:
+        cmap = {}
+        cardL = len(l)
+        countP = 0
+        for p in copoints:
+            if l.issubset(p):
+                countP += 1
+                cardP = len(p)
+                delta = cardP-cardL
+                cmap[delta] = 1 + cmap.get(delta,0)
+        if not onlySummary:
+            result[l] = cmap
+        kind = 'positive' if cmap.get(1,0)*2 > countP else 'fat'
+        result[kind] = 1 + result.get(kind,0)
+    return result
+
+## This can be used to get counter-examples to the theory that gammoids always have a positive coline
+
+def petalBicircular(count,length):
+    """
+        count __ number of petals
+        length __ length of the circle of the petal (or lollipop -<>)
+    
+        Bicircular Matroid on a graph that looks like lollipops that grow out of a single vertex
+        
+        <>--<> (would be count = 2, length = 4) 
+        
+        These kind of bicircular matroids can be used to find strict gammoids without a positive coline,
+        for instance
+        
+            petalBicircular(3,4).dual()
+        
+        has one fat (3 copoints with cardinality 5) and no positive coline.
+    
+        returns a BicircularMatroid
+    """
+    d = {}
+    vertex = 1
+    for p in range(count):
+        v0 = vertex
+        d[f"stem{p}.0"] = [0,v0]
+        for l in range(length):
+            u = v0+l
+            v = v0+(l+1)%length
+            d[f"x{p}.{l}"] = [u,v]
+        vertex += length
+    return BicircularMatroid(d)
+            
