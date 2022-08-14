@@ -4,6 +4,7 @@ import sage.graphs.digraph
 import sage.matroids.dual_matroid
 import sage.graphs.graph
 import itertools
+from sage.all import vector
 
 # Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
 # in a bipartite graph
@@ -763,6 +764,11 @@ def solveOrientation(M,getSolver=PicoSAT):
             and both C and Cd are dictionaries that map each (co-)circuit
             to a dictionary that gives the orientation of the element wrt to the
             (co-)circuit. The (-1)-companion is omitted from these dictionaries.
+
+        ex:
+
+            m = petalBicircular(3,4).dual()
+            C,Cd = solveOrientation(m)
         
     """
     s,m,FC,FCd = prepareOrientationStructure(M,getSolver)
@@ -809,3 +815,22 @@ def testOrientation(C,Cd):
                     return False
                 
     return True
+
+##  converts dictionary orientations to vector orientations
+
+def orientationToLattice(C):
+    """
+        C __ dictionary of oriented circuit or co-circuit family in dictionary format
+
+        returns dictionary as integer lattice vectors
+    """
+    groundset = sorted(frozenset().union(*C.keys()))
+    idx = dict([(e,i) for i,e in enumerate(groundset)])
+    d = {}
+    for c in C:
+        v = [0 for e in groundset]
+        cc = C[c]
+        for e in cc:
+            v[idx[e]] = cc[e]
+        d[c] = vector(v)
+    return d
