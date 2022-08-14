@@ -596,3 +596,42 @@ def petalBicircular(count,length):
         vertex += length
     return BicircularMatroid(d)
             
+## petalBicircular matroid represented as gammoid through a duality respecting representation
+
+def petalBicircularDRR(count,length):
+    """
+        count __ number of petals
+        length __ length of the circle of the petal (or lollipop -<>)
+    
+        Bicircular Matroid on a graph that looks like lollipops that grow out of a single vertex
+        
+        <>--<> (would be count = 2, length = 4) 
+        
+        These kind of bicircular matroids can be used to find strict gammoids without a positive coline,
+        for instance
+        
+            petalBicircularDRR(3,4).dual()
+        
+        has one fat (3 copoints with cardinality 5) and no positive coline.
+    
+        returns a Gammoid with a duality respecting representation
+    """
+    if count <= 1:
+        return Gammoid({},[],[])
+    d = {'stem0.0':[]}
+    targets = ['stem0.0']
+    
+    for c in range(count):
+        for p in range(length):
+            d[f'x{c}.{p}'] = []
+            targets.append(f'x{c}.{p}')
+        
+    for c in range(1,count):
+        d[f'stem{c}.0'] = ['v'] + [f'x{c}.{p}' for p in range(length)]
+        
+    if count > 1:
+        d['v'] = ['stem0.0'] + [f'x0.{p}' for p in range(length)]
+
+    groundset = frozenset(d.keys()).difference(['v'])
+
+    return Gammoid(d,targets,groundset)
