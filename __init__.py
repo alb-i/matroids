@@ -635,3 +635,177 @@ def petalBicircularDRR(count,length):
     groundset = frozenset(d.keys()).difference(['v'])
 
     return Gammoid(d,targets,groundset)
+
+## Tools needed to orient a given matroid (gammoids can always be oriented)
+
+import itertools
+import sage.logic.propcalc as propcalc
+from sage.sat.solvers.picosat import PicoSAT
+
+def prepareOrientationStructure(M,getSolver=PicoSAT):
+    """
+        M         __ matroid
+        getSolver __ (optional) function that returns a sat solver
+        
+        returns (s,m, FC, FCd) where
+             s   __ an instance of the SAT problem of assigning an orientation to M
+             m   __ maps variable indexes to triples
+                           (t, X, x) where t is either 'circuit' or 'cocircuit'
+                                           X is the corresponding circuit or cocircuit
+                                           x is the corresponding element of X
+             FC __ family of circuits
+             FCd __ family of cocircuits
+              
+    """
+    
+    FC = [sorted(x) for x in M.circuits()]
+    FCd = [sorted(x) for x in M.cocircuits()]
+    FC_idx = []
+    FCd_idx = []
+    
+    idx = 0
+    m = {}
+
+    for c in FC:
+        c_ = frozenset(c)
+        idxs = []
+        for x in c:
+            idx += 1
+            m[idx] = ('circuit',c_,x)
+            idxs.append(idx)
+        FC_idx.append(idxs)
+        
+    for d in FCd:
+        d_ = frozenset(d)
+        idxs = []
+        for y in d:
+            idx += 1
+            m[idx] = ('cocircuit',d_,y)
+            idxs.append(idx)
+        FCd_idx.append(idxs)
+        
+    x = [propcalc.formula(f"x{i}") for i in range(idx+1)]
+    
+    s = getSolver()
+    
+    conditions = []
+    goodCombinations = [(a,b,c,d) for a in [-1,1] for b in [-1,1] for c in [-1,1] for d in [-1,1] if a*b == -c*d]
+    def applyToVar(x,sign):
+        if sign < 0:
+            return ~x
+        return x
+    
+    for i,c in enumerate(FC):
+        supC = frozenset(c)
+        for j,d in enumerate(FCd):
+            sup = supC.intersection(d)
+            if sup:
+                if len(sup) == 1:
+                    raise f"Matroid {M} has a problem: circuit and cocircuit intersect in exactly one element, {c}, {d}!"
+                for e,f in itertools.combinations(sup,2):
+                    ce_idx = FC[i].index(e)
+                    cf_idx = FC[i].index(f)
+                    de_idx = FCd[j].index(e)
+                    df_idx = FCd[j].index(f)
+                    xce = x[FC_idx[i][ce_idx]]
+                    xcf = x[FC_idx[i][cf_idx]]
+                    xde = x[FCd_idx[j][de_idx]]
+                    xdf = x[FCd_idx[j][df_idx]]
+                    existsOne = [applyToVar(xce,a)&applyToVar(xde,b)&applyToVar(xcf,c)&applyToVar(xdf,d) 
+                                 for a,b,c,d in goodCombinations]
+                    existence = existsOne[0]
+                    for f in existsOne[1:]:
+                        existence = existence | f
+                    existence.convert_cnf()
+                    conditions.append(existence)
+    
+    def extractParts(t):
+        if type(t) != list:
+            t = [t]
+        op = t[0]
+        if op == '&':
+            return extractParts(t[1]) + extractParts(t[2])
+        else:
+            return [t]
+        
+    def getSatPart(t):
+        if type(t) != list:
+            t = [t]
+        op = t[0]
+        if op == '|':
+            return getSatPart(t[1]) + getSatPart(t[2])
+        elif op == '~':
+            return [-x for x in getSatPart(t[1])]
+        elif op.startswith('x'):
+            return [int(op[1:])]
+    
+    for f in conditions:
+        for df in extractParts(f.full_tree()):
+            pt = getSatPart(df)
+            s.add_clause(pt)
+                
+    return (s, m, FC,FCd)
+
+def solveOrientation(M,getSolver=PicoSAT):
+    """
+        M __ matroid
+        getSolver __ (optional) function that returns a sat solver
+        
+        returns an orientation of M, or None if M cannot be oriented
+        
+            The orientation is a tuple
+            
+            (C,Cd)
+            
+                where C  contains the circuits
+                and   Cd contains the cocircuits;
+                
+            and both C and Cd are dictionaries that map each (co-)circuit
+            to a dictionary that gives the orientation of the element wrt to the
+            (co-)circuit. The (-1)-companion is omitted from these dictionaries.
+        
+    """
+    s,m,FC,FCd = prepareOrientationStructure(M,getSolver)
+    sltn = s()
+    
+    C = {}
+    Cd = {}
+    
+    if sltn == False:
+        return None
+    
+    for idx, val in enumerate(sltn):
+        if idx == 0:
+            continue
+        t, X, x = m[idx]
+        if t == 'circuit':
+            Xd = C.get(X,{})
+            C[X] = Xd
+        elif t == 'cocircuit':
+            Xd = Cd.get(X,{})
+            Cd[X] = Xd
+        Xd[x] = +1 if not val else -1
+    return (C,Cd)
+    
+def testOrientation(C,Cd):
+    """
+        C __ circuit orientation
+        Cd __ cocircuit orientation
+
+        return True, if the property (O1) holds
+    """
+    for c in C:
+        cc = C[c]
+        for d in Cd:
+            sup = c.intersection(d)
+            if sup:
+                dd = Cd[d]
+                foundPair = False
+                for e,f in itertools.combinations(sup,2):
+                    if cc[e] * dd[e] == - cc[f] * dd[f]:
+                        foundPair = True
+                        break
+                if not foundPair:
+                    return False
+                
+    return True
