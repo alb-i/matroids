@@ -307,6 +307,49 @@ class DigraphRouting(object):
         """
         return frozenset((p[0] for p in self.paths))
 
+# Helper for the gammoid implementation
+    
+def flattenDigraph(D):
+    """
+        Takes a digraph and turns vertices that have both inbound and outbound 
+        arcs into gadgets that don't.
+        
+        D __ digraph
+        
+
+        returns a pair (D0, T0, X0) where 
+            D0 is a digraph that consists solely of sources and sinks;
+            T0 is the set of newly created sinks (have been in D before);
+            X0 is the set of vertices that need to be contracted
+    """
+    V = D.vertices()
+    degrees = zip(V,D.in_degree(V),D.out_degree(V))
+    gadgetify = [v for v,i,o in degrees if i > 0 and o > 0]
+    if not gadgetify:
+        return D, [], []
+    D0 = sage.graphs.digraph.DiGraph(D)
+    X0 = []
+    for v in gadgetify:
+        t = D0.add_vertex(name=None)
+        X0.append(t)
+        edges = list(D.outgoing_edges(v))
+        D0.delete_edges(edges)
+        D0.add_edge(t,v)
+        for q,r,label in edges: # q == v
+            D0.add_edge(t,r,label)
+            
+    return D0, gadgetify, X0
+
+def makeTargetsSinks(D,T):
+    """
+        D __ digraph
+        T __ set of vertices that should be turned into sinks
+
+        returns a copy of D minus all arcs (edges) that start in any element from T
+    """
+    D2 = sage.graphs.digraph.DiGraph(D)
+    D2.delete_edges(((u,v,l) for (u,v,l) in D.edges() if u in T ))
+    return D2
     
 # Straightforward implementation of a gammoid
 class Gammoid(sage.matroids.matroid.Matroid):
@@ -450,7 +493,35 @@ class Gammoid(sage.matroids.matroid.Matroid):
         
     def _repr_(self):
         return f"Gammoid({self.D},{self.T},{self.E})"
+    
+    def isObviouslyTransversal(self):
+        """ tests whether the digraph of this representation allows to quickly see that the gammoid is a transversal matroid
+        """
+        # If there are no paths from E to T in D which traverse more than a single arc, then we can just read off the transversal system
+        # corresponding to the represented gammoid
+        for p in self.D.all_paths_iterator(starting_vertices=self.E, ending_vertices=self.T, simple=True, trivial=True):
+            if len(p) > 2:
+                return False
+        return True
+    
+    def flattenRepresentation(self):
+        """ Modifies the digraph of the representation such that it becomes obviously transversal.
+            Returns (M,C) where M is the constructed Gammoid and C is a set of vertices that needs 
+            to be contracted in order to get this Gammoid back.
+        """
+        D0,T0,X0 = flattenDigraph(makeTargetsSinks(self.D,self.T))
+        M0 = Gammoid(D0,self.T.union(T0),self.E.union(X0))
+        return (M0,X0)
 
+    def superTransversal(self):
+        """ Returns a transversal matroid that contracts to this matroid; represented as TransversalMatroid
+        """
+        if not self.isObviouslyTransversal():
+            M0,X0 = self.flattenRepresentation()
+            return M0.superTransversal()
+        faceMap = {e:[v for u,v,l in self.D.outgoing_edges(e) if v in self.T]+([e] if e in self.T else []) for e in self.E}
+        return TransversalMatroid(faceMap)
+        
 
 ## Test for strict gammoid
 
