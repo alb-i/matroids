@@ -16,8 +16,12 @@ Clone this repo as the 'matroids' subdirectory from the place where you want to 
 ## Helpers
 * `flattedDigraph` - helper for recovering a transversal 'major' (co-minor) of a gammoid
 * `makeTargetsSinks` - removes outbound arcs for given set of vertices of a digraph
+* `outboundNeighbors` - computes outbound accessible neighbors relative to a routing (needed for augmenting path analog for digraph routings)
+* `petalBicircular` - generates elements of a special bicircular matroid class
+* `petalBicircularDRR` - gives a duality respecting representation of the above class element
+* `traverseArcs` - turns dictionary of successor vertices and a start vertex into a path
 
-not trustworthy code:
+untrustworthy code:
 
 * `prepareOrientationStructure` - prepares a SAT problem that tries to solve the problem of assigning each circuit in a given matroid a set of signs such that the result is an oriented matroid
 * `solveOrientation` - tries to find an orientation of a given matroid
