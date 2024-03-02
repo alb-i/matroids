@@ -4,7 +4,7 @@ import sage.graphs.digraph
 import sage.matroids.dual_matroid
 import sage.graphs.graph
 import itertools
-from sage.all import vector
+import sage.all
 
 # Straightforward implementation of a transversal matroid, using sage's facilities to find a maximal matching
 # in a bipartite graph
@@ -903,5 +903,5 @@ def orientationToLattice(C):
         cc = C[c]
         for e in cc:
             v[idx[e]] = cc[e]
-        d[c] = vector(v)
+        d[c] = sage.all.vector(v)
     return d
