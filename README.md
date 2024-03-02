@@ -26,3 +26,4 @@ untrustworthy code:
 * `prepareOrientationStructure` - prepares a SAT problem that tries to solve the problem of assigning each circuit in a given matroid a set of signs such that the result is an oriented matroid
 * `solveOrientation` - tries to find an orientation of a given matroid
 * `orientationToLattice`
+* `testOrientation`
