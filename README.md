@@ -14,7 +14,7 @@ Clone this repo as the 'matroids' subdirectory from the place where you want to 
 * `isStrictGammoid` - test whether a matroid is a strict gammoid
 
 ## Helpers
-* `flattedDigraph` - helper for recovering a transversal 'major' (co-minor) of a gammoid
+* `flattenDigraph` - helper for recovering a transversal 'major' (co-minor) of a gammoid
 * `makeTargetsSinks` - removes outbound arcs for given set of vertices of a digraph
 * `outboundNeighbors` - computes outbound accessible neighbors relative to a routing (needed for augmenting path analog for digraph routings)
 * `petalBicircular` - generates elements of a special bicircular matroid class
