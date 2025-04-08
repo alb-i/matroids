@@ -10,6 +10,7 @@ Clone this repo as the 'matroids' subdirectory from the place where you want to 
 * `TransversalMatroid` - matroid class implementation that gives you transversal matroids. Uses the sage built-in bipartite graphs and matching capabilities.
 * `DigraphRouting` - class that represents a routing in a digraph.
 * `Gammoid` - matroid class implementation that gives you gammoids through their representation using a digraph.
+* `AGammoid` - gives you a gammoid as the (deletion of the) dual of the transversal matroid that corresponds to the linkage system of D onto T.
 * `BicircularMatroid` - matroid class implementation for bicircular matroids
 * `isStrictGammoid` - test whether a matroid is a strict gammoid
 

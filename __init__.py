@@ -59,6 +59,39 @@ class TransversalMatroid(sage.matroids.matroid.Matroid):
     def _repr_(self):
         return f"TransversalMatroid({self.facemap})"
     
+# See Ingleton, Piff, 1973, "Gammoids and Transversal Matroids"; Chapter 3,
+
+def AGammoid(D, T, E=None):
+    """ Create a (strict) gammoid by dualizing the corresponding transversal matroid.
+    D __ digraph (some representation)
+    T __ set of target vertices of D 
+    E __ set of vertices that are edges in the matroid (optional)
+    
+    
+    ex: m = AGammoid({'a':"efg",'b':"cdf",'f':"xyz",'d':"z","x":"z"},"xyz","abcdefg")
+    
+    """
+    D0 = sage.graphs.digraph.DiGraph(D)
+    V0 = set(D0.vertex_iterator())
+    T0 = V0.intersection(T)
+    #
+    if E is None:
+        E0 = V0
+    else:
+        E0 = frozenset(V0).intersection(E)
+    # family index
+    I = V0.difference(T0)
+    vertexMap = {}
+    for idx,v in enumerate(I):
+        vertexMap[v] = idx
+    faceMap = {}
+    for v in V0:
+        in_v = [u for u,v,lbl in D0.incoming_edge_iterator([v])]
+        in_v.append(v)
+        faceMap[v] = frozenset([vertexMap[x] for x in in_v if x in vertexMap])
+    M_ast = TransversalMatroid(faceMap)
+    return M_ast.dual().delete(V0.difference(E0))
+    
 # Implementation helpers for gammoids that deal with augmentations of routings
        
 def outboundNeighbors(D, paths, visited=None, V=None):
@@ -354,7 +387,7 @@ def makeTargetsSinks(D,T):
 # Straightforward implementation of a gammoid
 class Gammoid(sage.matroids.matroid.Matroid):
     def __init__(self, D, T, E=None):
-        """ Create a strict gammoid.
+        """ Create a (strict) gammoid.
             D __ digraph (some representation)
             T __ set of target vertices of D 
             E __ set of vertices that are edges in the matroid (optional)
