@@ -28,3 +28,7 @@ untrustworthy code:
 * `solveOrientation` - tries to find an orientation of a given matroid
 * `orientationToLattice`
 * `testOrientation`
+
+# License
+
+This repository is licensed under the BSD-3-clause license.
